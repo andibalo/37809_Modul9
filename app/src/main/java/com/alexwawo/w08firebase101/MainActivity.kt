@@ -46,6 +46,7 @@ fun StudentRegistrationScreen(viewModel: StudentViewModel = viewModel()) {
     var studentId by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var program by remember { mutableStateOf("") }
+    var selectedStudentDocId by remember { mutableStateOf<String?>(null)
 
     Column(modifier = Modifier
         .padding(16.dp)
@@ -55,23 +56,68 @@ fun StudentRegistrationScreen(viewModel: StudentViewModel = viewModel()) {
         TextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
         TextField(value = program, onValueChange = { program = it }, label = { Text("Program") })
 
+        Column(modifier = Modifier
+            .padding(16.dp)
+            .fillMaxSize()) {
+
+            TextField(
+                value = studentId,
+                onValueChange = { studentId = it },
+                label = { Text("Student ID") })
+            TextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+            TextField(
+                value = program,
+                onValueChange = { program = it },
+                label = { Text("Program") })
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextField(
+                    value = currentPhone,
+                    onValueChange = { currentPhone = it },
+                    label = { Text("Phone Number") },
+                    modifier = Modifier.weight(1f)
+                )
+                Button(onClick = {
+                    if (currentPhone.isNotBlank()) {
+                        phoneList = phoneList + currentPhone
+                        currentPhone = ""
+                    }
+                }, modifier = Modifier.padding(start = 8.dp)) {
+                    Text("Add")
+                }
+            }
+        }
+
+        if (phoneList.isNotEmpty()) {
+            Text("Phone Numbers:", style = MaterialTheme.typography.labelLarge)
+            phoneList.forEach {
+                Text("- $it")
+            }
+        }
+
         Button(
             onClick = {
-                if (editingStudent == null) {
-                    viewModel.addStudent(Student(studentId, name,
-                        program))
+                if (selectedStudentDocId != null) {
+
+                    viewModel.updateStudent(Student(selectedStudentDocId!!, studentId, name,
+                        program, phoneList))
+                    selectedStudentDocId = null
                 } else {
-                    viewModel.updateStudent(Student(studentId, name,
-                        program, editingStudent!!.docId))
-                    editingStudent = null
+                    viewModel.addStudent(Student("", studentId, name,
+                        program, phoneList))
                 }
+                // Reset form
                 studentId = ""
                 name = ""
                 program = ""
-            }
+                phoneList = listOf()
+            },
+            modifier = Modifier.padding(top = 8.dp)
         ) {
-            Text(if (editingStudent == null) "Submit" else "Update")
+            Text(if (selectedStudentDocId != null) "Update" else
+                "Submit")
         }
+
 
         Divider(modifier = Modifier.padding(vertical = 16.dp))
 
@@ -80,21 +126,26 @@ fun StudentRegistrationScreen(viewModel: StudentViewModel = viewModel()) {
         LazyColumn {
             items(viewModel.students) { student ->
                 Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    Text("${student.id} - ${student.name} -
-                        ${student.program}")
-                    Button(onClick = {
-                        studentId = student.id
-                        name = student.name
-                        program = student.program
-                        editingStudent = student
-                    }) {
-                        Text("Edit")
+                    Row {
+                        Button(onClick = {
+                            studentId = student.id
+                            name = student.name
+                            program = student.program
+                            phoneList = student.phones
+                            selectedStudentDocId = student.docId
+                        }) {
+                            Text("Edit")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.deleteStudent(student)
+                            },
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            Text("Delete")
+                        }
                     }
-                    Button(onClick = {
-                        viewModel.deleteStudent(student)
-                    }) {
-                        Text("Delete")
-                    }
+                    Divider(modifier = Modifier.padding(vertical = 8.dp))
                 }
             }
         }
