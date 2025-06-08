@@ -38,38 +38,55 @@ class StudentViewModel : ViewModel() {
     }
 
     fun updateStudent(student: Student) {
-        val updatedData = hashMapOf(
+        val studentMap = mapOf(
             "id" to student.id,
             "name" to student.name,
-            "program" to student.program,
-            "phones" to student.phones
+            "program" to student.program
         )
-        db.collection("students")
-            .document(student.docId)
-            .set(updatedData)
+        val studentDocRef = db.collection("students").document(student.docId)
+        studentDocRef.set(studentMap)
             .addOnSuccessListener {
-                Log.d("Firestore", "DocumentSnapshot updated with ID:
-                    ${student.docId}")
-                fetchStudents()
+                val phonesRef = studentDocRef.collection("phones")
+                // Step 1: Delete old phones
+                phonesRef.get().addOnSuccessListener { snapshot ->
+                    val deleteTasks = snapshot.documents.map {
+                        it.reference.delete() }
+                    // Step 2: When all phones deleted, add new phones
+
+                    com.google.android.gms.tasks.Tasks.whenAllComplete(deleteTasks)
+                        .addOnSuccessListener {
+                            val addPhoneTasks = student.phones.map { phone ->
+                                val phoneMap = mapOf("number" to phone)
+                                phonesRef.add(phoneMap)
+                            }
+                            // Step 3: After all new phones added, fetch
+                            updated list
+
+                                    com.google.android.gms.tasks.Tasks.whenAllComplete(addPhoneTasks)
+                                        .addOnSuccessListener {
+                                            fetchStudents()
+                                        }
+                        }
+                }
             }
             .addOnFailureListener { e ->
-                Log.w("Firestore", "Error updating document", e)
+                Log.w("Firestore", "Error updating student", e)
             }
     }
 
+
     fun deleteStudent(student: Student) {
-        db.collection("students")
-            .document(student.docId)
+        db.collection("students").document(student.docId)
             .delete()
             .addOnSuccessListener {
-                Log.d("Firestore", "DocumentSnapshot deleted with ID:
-                    ${student.docId}")
+                Log.d("Firestore", "Student deleted")
                 fetchStudents()
             }
-            .addOnFailureListener { e ->
-                Log.w("Firestore", "Error deleting document", e)
+            .addOnFailureListener {
+                Log.e("Firestore", "Error deleting student", it)
             }
     }
+
 
     private fun fetchStudents() {
         db.collection("students")
